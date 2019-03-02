@@ -65,8 +65,8 @@ int main()
 
     // dispatchor.dispatch(Events{FooEvent{123}});
 
-    dispatchor2.dispatch(Events{FooEvent{123}});
-    dispatchor2.pull();
+    main.dispatch(Events{FooEvent{123}});
+    main.pull();
 
     return 0;
 }

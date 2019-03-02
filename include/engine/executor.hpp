@@ -26,6 +26,12 @@ struct Executor
         dispatch(Events{e});
     }
 
+    template <typename F>
+    void onPull(F f)
+    {
+        pull();
+    }
+
     template<typename TEvent>
     void dispatch(const TEvent& e)
     {
@@ -38,14 +44,10 @@ struct Executor
         for (auto& a : actors)
         {
             std::visit([&](auto &aa) {
-                // std::cout << "???" << std::endl;
                 aa.onPull([&](auto &ee) {
-                //     std::cout << "got something ?" << std::endl;
                     dispatch(ee);
                 });
              }, a);
-
-            // std::visit(PublisherActor{}, a);
         }
     }
 

@@ -26,7 +26,6 @@ struct EventPublisher
     template <typename F>
     void onPull(F f)
     {
-        // std::cout << "pulling...!" << std::endl;
         queue->try_consume(f);
     }
 
