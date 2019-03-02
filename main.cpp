@@ -2,8 +2,7 @@
 #include <vector>
 
 #include "engine/executor.hpp"
-#include "event_handler.hpp"
-#include "event_helper.hpp"
+#include "events/event_handler.hpp"
 
 struct FooEvent { std::uint8_t counter{0}; };
 struct BarEvent { std::uint8_t counter{0}; std::uint64_t data{0}; };

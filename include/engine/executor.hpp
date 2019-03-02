@@ -2,28 +2,9 @@
 #define __ENGINE_EXECUTOR__
 
 #include "tools/variant.hpp"
-#include "event_helper.hpp"
+#include "events/event_helper.hpp"
+#include "engine/executor_actor.hpp"
 #include <vector>
-
-template <typename... TActorBase>
-struct ActorExecutor
-{
-};
-
-template <typename... TActorBase>
-struct ActorExecutor<std::variant<TActorBase...>> : TActorBase...
-{
-    template<typename TActor, typename TEvent>
-    void operator()(TActor& a, const TEvent& e, decltype(TActor::onEvent(e))* ignore = nullptr)
-    {
-        a.onEvent(e);
-    }
-
-    template<typename... T>
-    void operator()(T... p)
-    {
-    }
-};
 
 template <typename... TA0>
 struct Executor
@@ -53,7 +34,7 @@ struct Executor
 
 private:
     std::vector<Actors> actors;
-    ActorExecutor<Actors> callback;
+    ExecutorActor<Actors> callback;
 
     void addActor() {}
 
