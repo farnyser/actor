@@ -6,7 +6,7 @@
 template <typename... TEvents>
 struct EventHandler
 {
-    using Tuple = std::tuple<TEvents...>;
+    using Events = std::variant<TEvents...>;
 };
 
 #endif // !__EVENT_HANDLE__

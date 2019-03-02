@@ -8,6 +8,9 @@ template <typename... T>
 struct TupleToVariant {};
 
 template <typename... T>
+struct VariantToReducedVariant {};
+
+template <typename... T>
 struct TupleToReducedVariant {};
 
 template <typename... T>
@@ -57,6 +60,12 @@ struct MyCat<T0, T...> : public MyCatI<(std::is_same<T0, T>::value + ...) == 1, 
 
 template <typename... T>
 struct TupleToReducedVariant<std::tuple<T...>>
+{
+    using Variant = typename MyCat<T...>::Variant;
+};
+
+template <typename... T>
+struct VariantToReducedVariant<std::variant<T...>>
 {
     using Variant = typename MyCat<T...>::Variant;
 };
