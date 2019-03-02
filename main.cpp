@@ -1,11 +1,20 @@
 #include <iostream>
+#include <vector>
 #include <variant>
+#include <tuple>
+#include "variant.hpp"
 
 struct FooEvent { std::uint8_t counter{0}; };
 struct BarEvent { std::uint8_t counter{0}; std::uint64_t data{0}; };
 // using Event = std::variant<FooEvent, BarEvent>;
 
-class MyActor
+template <typename... TEvents>
+struct EventHandler
+{
+    using Tuple = std::tuple<TEvents...>;
+};
+
+class MyActor : public EventHandler<FooEvent>
 {
 public:
     void onEvent(FooEvent e)
@@ -14,7 +23,7 @@ public:
     }
 };
 
-class MyOtherActor
+class MyOtherActor : public EventHandler<BarEvent>
 {
 public:
     void onEvent(BarEvent e)
@@ -23,7 +32,7 @@ public:
     }
 };
 
-class MyCmbinedActor
+class MyCmbinedActor : public EventHandler<FooEvent, BarEvent>
 {
 public:
     void onEvent(FooEvent e)
@@ -38,11 +47,28 @@ public:
 
 using Actor = std::variant<MyActor, MyOtherActor, MyCmbinedActor>;
 
+template <typename... T>
+struct _GetEvents
+{
+};
+
+template <typename T0>
+struct _GetEvents<T0>
+{
+    using Tuple = typename T0::Tuple;
+    using Events = typename TupleToVariant<Tuple>::Variant;
+};
+
+template <typename T0, typename... T>
+struct _GetEvents<T0, T...>
+{
+    using Tuple = decltype(std::tuple_cat(typename T0::Tuple{}, typename _GetEvents<T...>::Tuple{}));
+    using Events = typename TupleToVariant<Tuple>::Variant;
+};
+
 template <typename... TA0>
 struct TR : TA0...
 {
-    // using TA0::onEvent...;
-
     template<typename TActor, typename TEvent>
     void operator()(TActor& a, const TEvent& e, decltype(TActor::onEvent(TEvent{}))* ignore = nullptr)
     {
@@ -53,6 +79,16 @@ struct TR : TA0...
     void operator()(T... p)
     {
     }
+
+    template<typename TActor, typename TEvent>
+    void dispatch(TActor& a, const TEvent& e)
+    {
+        std::cout << "dispatch called" << std::endl;
+        // std::visit(*this, a, std::variant<TEvent>(e));
+        std::visit(*this, a, (e));
+    }
+
+    using Events = typename _GetEvents<TA0...>::Events;
 };
 
 template <typename T>
@@ -85,6 +121,27 @@ int main()
     std::visit(TR<MyActor, MyOtherActor, MyCmbinedActor>{}, b, Event(BarEvent{4, 100}));
     std::visit(TR<MyActor, MyOtherActor, MyCmbinedActor>{}, c, Event(BarEvent{4, 100}));
 
+    auto dispatchor = TR<MyActor, MyOtherActor, MyCmbinedActor>{};
+
+    typename MyCat<int>::Variant xxxx = 1;
+    typename MyCat<int, float>::Variant xxx = 1;
+    typename MyCat<int, int>::Variant xxzx = 1;
+    typename MyCat<int, float, int>::Variant xxzzx = 1;
+    typename MyCat<float, char*, int>::Variant zzezez = (char*)&"aa";
+    typename MyCat<char*, float, int>::Variant xxzzzx = (char*)&"aa";
+    typename MyCat<char*, float, int, char*>::Variant azazazaza = (char*)&"aa";
+    typename MyCat<int, float, int, float>::Variant azazzzzazaza1 = 1;
+    typename MyCat<int, float, int, float>::Variant azazzzzazaza2 = 1.0f;
+
+
+    // dispatchor.dispatch(a, FooEvent{9});
+
+    std::vector<decltype(dispatchor)::Events> data;
+    data.push_back(std::variant<FooEvent, BarEvent>{FooEvent{10}});
+    data.push_back(std::variant<FooEvent, BarEvent>{BarEvent{10, 100}});
+
+    for(auto& d : data)
+        dispatchor.dispatch(c, d);
 
     return 0;
 }
