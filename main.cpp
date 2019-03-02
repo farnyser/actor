@@ -45,7 +45,7 @@ int main()
     auto b{MyOtherActor{}};
     auto c{MyCombinedActor{}};
 
-    auto dispatchor = Executor{a, b, c};
+    auto dispatchor = Executor{a, b, c, c};
     auto dispatchor2 = Executor{a, b};
     auto main = Executor{dispatchor, dispatchor2};
 

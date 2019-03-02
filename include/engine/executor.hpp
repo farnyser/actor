@@ -5,19 +5,14 @@
 #include "event_helper.hpp"
 #include <vector>
 
-template <typename... TA0>
-struct Executor : TA0...
+template <typename... TActorBase>
+struct ActorExecutor
 {
-    using Actors = typename std::variant<TA0...>;
-    using Events = typename _GetEvents<TA0...>::Events;
+};
 
-    Executor() {}
-
-    Executor(TA0... actors)
-    {
-        addActor(actors...);
-    }
-
+template <typename... TActorBase>
+struct ActorExecutor<std::variant<TActorBase...>> : TActorBase...
+{
     template<typename TActor, typename TEvent>
     void operator()(TActor& a, const TEvent& e, decltype(TActor::onEvent(e))* ignore = nullptr)
     {
@@ -27,6 +22,20 @@ struct Executor : TA0...
     template<typename... T>
     void operator()(T... p)
     {
+    }
+};
+
+template <typename... TA0>
+struct Executor
+{
+    using Actors = typename VariantToReducedVariant<std::variant<TA0...>>::Variant;
+    using Events = typename _GetEvents<TA0...>::Events;
+
+    Executor() {}
+
+    Executor(TA0... actors)
+    {
+        addActor(actors...);
     }
 
     template<typename TEvent>
@@ -39,18 +48,12 @@ struct Executor : TA0...
     void dispatch(const TEvent& e)
     {
         for (auto& a : actors)
-            dispatch(a, e);
+            std::visit(callback, a, e);
     }
-
 
 private:
     std::vector<Actors> actors;
-
-    template<typename TActor, typename TEvent>
-    void dispatch(TActor& a, const TEvent& e)
-    {
-        std::visit(*this, a, e);
-    }
+    ActorExecutor<Actors> callback;
 
     void addActor() {}
 
