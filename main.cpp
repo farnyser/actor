@@ -7,15 +7,16 @@
 struct FooEvent { std::uint8_t counter{0}; };
 struct BarEvent { std::uint8_t counter{0}; std::uint64_t data{0}; };
 
-struct MyActor : public EventHandler<FooEvent>
+struct MyActor : public EventHandler<FooEvent>, public EventPublisher<BarEvent>
 {
     void onEvent(FooEvent e)
     {
         std::cout << "foo " << (int)e.counter << std::endl;
+        publish(BarEvent{5, 55});
     }
 };
 
-struct MyOtherActor : public EventHandler<BarEvent>
+struct MyOtherActor : public EventHandler<BarEvent>, public EventPublisher<FooEvent>
 {
     void onEvent(BarEvent e)
     {
@@ -23,7 +24,7 @@ struct MyOtherActor : public EventHandler<BarEvent>
     }
 };
 
-struct MyCombinedActor : public EventHandler<FooEvent, BarEvent>
+struct MyCombinedActor : public EventHandler<FooEvent, BarEvent>, public EventPublisher<FooEvent>
 {
     void onEvent(FooEvent e)
     {
@@ -51,21 +52,21 @@ int main()
     // using Events = typename decltype(main)::Events;
     using Events = typename decltype(dispatchor)::Events;
 
-    std::vector<Events> data;
-    data.push_back(Events{FooEvent{10}});
-    data.push_back(Events{BarEvent{10, 100}});
-    data.push_back(Events{FooEvent{7}});
+    // std::vector<Events> data;
+    // data.push_back(Events{FooEvent{10}});
+    // data.push_back(Events{BarEvent{10, 100}});
+    // data.push_back(Events{FooEvent{7}});
 
-    for(auto& d : data) {
+    // for(auto& d : data) {
         // dispatchor.dispatch(d);
         // dispatchor2.onEvent(d);
-        main.dispatch(d);
-    }
+    //     main.dispatch(d);
+    // }
 
     // dispatchor.dispatch(Events{FooEvent{123}});
 
-    // main.dispatch(Events{FooEvent{123}});
-
+    dispatchor2.dispatch(Events{FooEvent{123}});
+    dispatchor2.pull();
 
     return 0;
 }

@@ -11,6 +11,7 @@ struct Executor
 {
     using Actors = typename VariantToReducedVariant<std::variant<TA0...>>::Variant;
     using Events = typename _GetEvents<TA0...>::Events;
+    using PublishedEvents = typename _GetPublishedEvents<TA0...>::PublishedEvents;
 
     Executor() {}
 
@@ -30,6 +31,22 @@ struct Executor
     {
         for (auto& a : actors)
             std::visit(callback, a, e);
+    }
+
+    void pull()
+    {
+        for (auto& a : actors)
+        {
+            std::visit([&](auto &aa) {
+                // std::cout << "???" << std::endl;
+                aa.onPull([&](auto &ee) {
+                //     std::cout << "got something ?" << std::endl;
+                    dispatch(ee);
+                });
+             }, a);
+
+            // std::visit(PublisherActor{}, a);
+        }
     }
 
 private:
