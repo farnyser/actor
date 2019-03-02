@@ -41,13 +41,12 @@ int main()
 {
     std::cout << "Hello, World!" << std::endl;
 
-    auto dispatchor = Executor<MyActor, MyOtherActor, MyCombinedActor>{};
-    using Actor = typename decltype(dispatchor)::Actors;
-    using Events = typename decltype(dispatchor)::Events;
+    auto a{MyActor{}};
+    auto b{MyOtherActor{}};
+    auto c{MyCombinedActor{}};
 
-    Actor a{MyActor{}};
-    Actor b{MyOtherActor{}};
-    Actor c{MyCombinedActor{}};
+    auto dispatchor = Executor{a, b, c};
+    using Events = typename decltype(dispatchor)::Events;
 
     std::vector<Events> data;
     data.push_back(Events{FooEvent{10}});
@@ -55,10 +54,12 @@ int main()
     data.push_back(Events{FooEvent{7}});
 
     for(auto& d : data) {
-        dispatchor.dispatch(a, d);
-        dispatchor.dispatch(b, d);
-        dispatchor.dispatch(c, d);
+        dispatchor.dispatch(d);
     }
+
+    auto dispatchor2 = Executor{c};
+    // auto dispatchor3 = Executor{dispatchor, dispatchor2};
+
 
     return 0;
 }
