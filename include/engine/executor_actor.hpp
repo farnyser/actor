@@ -23,4 +23,24 @@ struct ExecutorActor<std::variant<TActorBase...>> : TActorBase...
     }
 };
 
+template <typename... TActorBase>
+struct PublisherActor
+{
+};
+
+template <typename... TActorBase>
+struct PublisherActor<std::variant<TActorBase...>> : TActorBase...
+{
+    template<typename TActor, typename F>
+    void operator()(TActor& a, F f, decltype(TActor::onPull(f))* ignore = nullptr)
+    {
+        a.onPull(f);
+    }
+
+    template<typename... T>
+    void operator()(T... p)
+    {
+    }
+};
+
 #endif // !__EXECUTOR_ACTOR__

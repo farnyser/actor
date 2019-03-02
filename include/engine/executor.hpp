@@ -53,6 +53,7 @@ struct Executor
 
 private:
     std::vector<Actors> actors;
+    std::vector<Actors*> publishers;
     ExecutorActor<Actors> callback;
 
     void addActor() {}

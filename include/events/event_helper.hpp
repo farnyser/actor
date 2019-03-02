@@ -2,6 +2,7 @@
 #define __EVENT_HELPER__
 
 #include "tools/variant.hpp"
+#include "events/event_handler.hpp"
 
 template <typename... T>
 struct _GetEvents
@@ -31,17 +32,23 @@ struct _GetPublishedEvents
 {
 };
 
+template <typename... T>
+struct _GetPublishedEvents<EventPublisher<T...>>
+{
+    using PublishedEvents = typename VariantToReducedVariant<T...>::Variant;
+};
+
 template <typename T0>
 struct _GetPublishedEvents<T0>
 {
-    using PublishedEvents = typename VariantToReducedVariant<typename T0::PublishedEvents>::Variant;
+    using PublishedEvents = std::variant<std::monostate>;
 };
 
 template <typename T0, typename... T>
 struct _GetPublishedEvents<T0, T...>
 {
 private:
-    using p1 = typename T0::PublishedEvents;
+    using p1 = typename _GetPublishedEvents<T0>::PublishedEvents;
     using p2 = typename _GetPublishedEvents<T...>::PublishedEvents;
     using t1 = typename TupleToVariant<p1>::Tuple;
     using t2 = typename TupleToVariant<p2>::Tuple;

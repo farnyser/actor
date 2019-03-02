@@ -1,13 +1,14 @@
 #include <iostream>
 #include <vector>
 
+#include "actor/actor.hpp"
 #include "engine/executor.hpp"
 #include "events/event_handler.hpp"
 
 struct FooEvent { std::uint8_t counter{0}; };
 struct BarEvent { std::uint8_t counter{0}; std::uint64_t data{0}; };
 
-struct MyActor : public EventHandler<FooEvent>, public EventPublisher<BarEvent>
+struct MyActor : public Actor<EventHandler<FooEvent>, EventPublisher<BarEvent>>
 {
     void onEvent(FooEvent e)
     {
@@ -16,7 +17,7 @@ struct MyActor : public EventHandler<FooEvent>, public EventPublisher<BarEvent>
     }
 };
 
-struct MyOtherActor : public EventHandler<BarEvent>, public EventPublisher<FooEvent>
+struct MyOtherActor : public Actor<EventHandler<BarEvent>>
 {
     void onEvent(BarEvent e)
     {
@@ -24,7 +25,7 @@ struct MyOtherActor : public EventHandler<BarEvent>, public EventPublisher<FooEv
     }
 };
 
-struct MyCombinedActor : public EventHandler<FooEvent, BarEvent>, public EventPublisher<FooEvent>
+struct MyCombinedActor : public Actor<EventHandler<FooEvent, BarEvent>, EventPublisher<FooEvent>>
 {
     void onEvent(FooEvent e)
     {
