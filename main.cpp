@@ -45,7 +45,12 @@ int main()
     auto b{MyOtherActor{}};
     auto c{MyCombinedActor{}};
 
-    auto dispatchor = Executor{a, b, c};
+    auto dispatchor = Executor{"#1", a, b, c};
+    // auto dispatchor = Executor{"#1", a, b, c};
+    auto dispatchor2 = Executor{"#2", a, b};
+    auto main = Executor{"#main", dispatchor, dispatchor2};
+
+    // using Events = typename decltype(main)::Events;
     using Events = typename decltype(dispatchor)::Events;
 
     std::vector<Events> data;
@@ -54,11 +59,14 @@ int main()
     data.push_back(Events{FooEvent{7}});
 
     for(auto& d : data) {
-        dispatchor.dispatch(d);
+        // dispatchor.dispatch(d);
+        // dispatchor2.onEvent(d);
+        main.dispatch(d);
     }
 
-    auto dispatchor2 = Executor{c};
-    // auto dispatchor3 = Executor{dispatchor, dispatchor2};
+    // dispatchor.dispatch(Events{FooEvent{123}});
+
+    // main.dispatch(Events{FooEvent{123}});
 
 
     return 0;

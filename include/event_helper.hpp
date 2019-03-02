@@ -11,15 +11,15 @@ struct _GetEvents
 template <typename T0>
 struct _GetEvents<T0>
 {
-    using Tuple = typename T0::Tuple;
-    using Events = typename TupleToReducedVariant<Tuple>::Variant;
+    using Events = typename TupleToReducedVariant<typename T0::Tuple>::Variant;
+    using Tuple = typename TupleToVariant<Events>::Tuple;
 };
 
 template <typename T0, typename... T>
 struct _GetEvents<T0, T...>
 {
-    using Tuple = decltype(std::tuple_cat(typename T0::Tuple{}, typename _GetEvents<T...>::Tuple{}));
-    using Events = typename TupleToReducedVariant<Tuple>::Variant;
+    using Events = typename TupleToReducedVariant<decltype(std::tuple_cat(typename T0::Tuple{}, typename _GetEvents<T...>::Tuple{}))>::Variant;
+    using Tuple = typename TupleToVariant<Events>::Tuple;
 };
 
 #endif // !__EVENT_HELPER__

@@ -17,6 +17,12 @@ struct TupleToVariant<std::tuple<T...>>
 };
 
 template <typename... T>
+struct TupleToVariant<std::variant<T...>>
+{
+    using Tuple = typename std::tuple<T...>;
+};
+
+template <typename... T>
 struct MyCat{};
 
 template <typename T0>
