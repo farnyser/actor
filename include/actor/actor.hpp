@@ -3,6 +3,7 @@
 
 #include <variant>
 #include "events/event_handler.hpp"
+#include "events/event_publisher.hpp"
 
 template <typename... T>
 struct Actor

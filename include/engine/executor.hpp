@@ -2,6 +2,7 @@
 #define __ENGINE_EXECUTOR__
 
 #include "tools/variant.hpp"
+#include "tools/queue_lock.hpp"
 #include "events/event_helper.hpp"
 #include "engine/executor_actor.hpp"
 #include <vector>
@@ -45,8 +46,9 @@ struct Executor
     template <typename TEvent>
     void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
     {
-        // std::cout << "publish called !" << (this) << std::endl;
+        std::cout << "> publish called..." << (this) << std::endl;
         while(!queue->try_push([&](auto& buffer) { buffer = e; }));
+        std::cout << "> publish done !" << (this) << std::endl;
     }
 
     template <typename... T>

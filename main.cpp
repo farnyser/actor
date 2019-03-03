@@ -3,7 +3,6 @@
 
 #include "actor/actor.hpp"
 #include "engine/executor.hpp"
-#include "events/event_handler.hpp"
 
 struct FooEvent { std::uint32_t counter{0}; };
 struct BarEvent { std::uint32_t counter{0}; std::uint64_t data{0}; };
@@ -71,40 +70,41 @@ int main()
     // main.pull();
 
     auto d1 = Executor{a};
-    auto d2 = Executor{b};
-    auto coordinator = Executor{d1, d2};
+    // auto d2 = Executor{b};
+    auto d2 = Executor{b, c};
+    auto d3 = Executor{c};
+    auto coordinator = Executor{d1, d2, d3};
 
     d1.onEvent(FooEvent{1});
-    d1.pull();
 
-    // decltype(coordinator)::PublishedEvents xs = 1;
-    coordinator.pull();
-    d1.pull();
-    d2.pull();
-    coordinator.pull();
-    d1.pull();
-    d2.pull();
-    coordinator.pull();
-    d1.pull();
-    d2.pull();
-    coordinator.pull();
+    // d1.pull();
+    // d2.pull();
+    // d3.pull();
+    // coordinator.pull();
 
+    // d1.pull();
+    // d2.pull();
+    // d3.pull();
+    // coordinator.pull();
 
-    // std::thread th1([&](){
-    //     while(true) d1.pull();
-    // });
+    // d1.pull();
+    // d2.pull();
+    // d3.pull();
+    // coordinator.pull();
 
-    // std::thread th2([&](){
-    //     while(true) d2.pull();
-    // });
+    // d1.pull();
+    // d2.pull();
+    // d3.pull();
+    // coordinator.pull();
 
-    // d1.onEvent(FooEvent{0});
+    std::thread th1([&](){ while(true) d1.pull();});
+    std::thread th2([&](){ while(true) d2.pull();});
+    std::thread th3([&](){ while(true) d3.pull();});
 
-    // while(true)
-    //     coordinator.pull();
+    while(true) coordinator.pull();
 
-    // th1.join();
-    // th2.join();
+    th1.join(); th2.join(); th3.join();
 
+    std::cout << "Kthxbye!" << std::endl;
     return 0;
 }
