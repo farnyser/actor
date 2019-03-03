@@ -81,27 +81,31 @@ int main()
     // d2.pull();
     // d3.pull();
     // coordinator.pull();
+    // coordinator.dispatch();
 
     // d1.pull();
     // d2.pull();
     // d3.pull();
     // coordinator.pull();
+    // coordinator.dispatch();
 
     // d1.pull();
     // d2.pull();
     // d3.pull();
     // coordinator.pull();
+    // coordinator.dispatch();
 
     // d1.pull();
     // d2.pull();
     // d3.pull();
     // coordinator.pull();
+    // coordinator.dispatch();
 
     std::thread th1([&](){ while(true) d1.pull();});
     std::thread th2([&](){ while(true) d2.pull();});
     std::thread th3([&](){ while(true) d3.pull();});
 
-    while(true) coordinator.pull();
+    while(true) { coordinator.pull(); coordinator.dispatch(); }
 
     th1.join(); th2.join(); th3.join();
 

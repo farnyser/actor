@@ -62,12 +62,21 @@ struct Executor
     {
         // std::cout << "dispatch called !" << (this) << std::endl;
 
-         std::visit([&](auto& ev) {
-            publish(ev);
-        }, e);
+        //  std::visit([&](auto& ev) {
+        //     publish(ev);
+        // }, e);
 
         for (auto& a : actors)
             std::visit(callback, a, e);
+    }
+
+    void dispatch()
+    {
+        std::vector<PublishedEvents> events;
+        while(queue->try_consume([&](auto& e) { events.push_back(e); }));
+
+        for (auto& e : events)
+            dispatch(e);
     }
 
     void pull()
@@ -76,7 +85,11 @@ struct Executor
         {
             std::visit([&](auto &aa) {
                 aa.onPull([&](auto &ee) {
-                    dispatch(ee);
+                    // dispatch(ee);
+
+                    std::visit([&](auto& ev) {
+                        publish(ev);
+                    }, ee);
                 });
              }, a);
         }
@@ -87,7 +100,13 @@ struct Executor
         while(true)
         {
             pull();
+            dispatch();
         }
+    }
+
+    auto spawn()
+    {
+        return std::thread{[&](){ while(true) pull(); }};
     }
 
 private:
