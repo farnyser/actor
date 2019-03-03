@@ -27,14 +27,12 @@ struct Executor
     template<typename TEvent>
     void onEvent(TEvent e, decltype(Events{TEvent{}})* ignore = nullptr)
     {
-        // std::cout << "on event called !" << (this) << std::endl;
         dispatch(Events{e});
     }
 
     template<typename... T>
     void onEvent(T... ignore)
     {
-        // std::cout << "on event is sad... " << (this) << std::endl;
     }
 
     template <typename F>
@@ -46,53 +44,19 @@ struct Executor
     template <typename TEvent>
     void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
     {
-        std::cout << "> publish called..." << (this) << std::endl;
         while(!queue->try_push([&](auto& buffer) { buffer = e; }));
-        std::cout << "> publish done !" << (this) << std::endl;
     }
 
     template <typename... T>
     void publish(T... t)
     {
-        // std::cout << "publish is sad... " << (this) << std::endl;
     }
 
     template<typename TEvent>
     void dispatch(const TEvent& e)
     {
-        // std::cout << "dispatch called !" << (this) << std::endl;
-
-        //  std::visit([&](auto& ev) {
-        //     publish(ev);
-        // }, e);
-
         for (auto& a : actors)
             std::visit(callback, a, e);
-    }
-
-    void dispatch()
-    {
-        std::vector<PublishedEvents> events;
-        while(queue->try_consume([&](auto& e) { events.push_back(e); }));
-
-        for (auto& e : events)
-            dispatch(e);
-    }
-
-    void pull()
-    {
-        for (auto& a : actors)
-        {
-            std::visit([&](auto &aa) {
-                aa.onPull([&](auto &ee) {
-                    // dispatch(ee);
-
-                    std::visit([&](auto& ev) {
-                        publish(ev);
-                    }, ee);
-                });
-             }, a);
-        }
     }
 
     void mainloop()
@@ -122,6 +86,29 @@ private:
     {
         actors.push_back(Actors{a0});
         addActor(a...);
+    }
+
+    void pull()
+    {
+        for (auto& a : actors)
+        {
+            std::visit([&](auto &aa) {
+                aa.onPull([&](auto &ee) {
+                    std::visit([&](auto& ev) {
+                        publish(ev);
+                    }, ee);
+                });
+             }, a);
+        }
+    }
+
+    void dispatch()
+    {
+        std::vector<PublishedEvents> events;
+        while(queue->try_consume([&](auto& e) { events.push_back(e); }));
+
+        for (auto& e : events)
+            dispatch(e);
     }
 };
 

@@ -46,66 +46,18 @@ int main()
     auto b{MyOtherActor{}};
     auto c{MyCombinedActor{}};
 
-    // auto dispatchor = Executor{a, b, c, c};
-    // auto dispatchor2 = Executor{a, b};
-    // auto main = Executor{dispatchor, dispatchor2};
-
-    // using Events = typename decltype(main)::Events;
-    // using Events = typename decltype(dispatchor)::Events;
-
-    // std::vector<Events> data;
-    // data.push_back(Events{FooEvent{10}});
-    // data.push_back(Events{BarEvent{10, 100}});
-    // data.push_back(Events{FooEvent{7}});
-
-    // for(auto& d : data) {
-        // dispatchor.dispatch(d);
-        // dispatchor2.onEvent(d);
-    //     main.dispatch(d);
-    // }
-
-    // dispatchor.dispatch(Events{FooEvent{123}});
-
-    // main.dispatch(Events{FooEvent{123}});
-    // main.pull();
-
     auto d1 = Executor{a};
-    // auto d2 = Executor{b};
     auto d2 = Executor{b, c};
     auto d3 = Executor{c};
     auto coordinator = Executor{d1, d2, d3};
 
     d1.onEvent(FooEvent{1});
 
-    // d1.pull();
-    // d2.pull();
-    // d3.pull();
-    // coordinator.pull();
-    // coordinator.dispatch();
+    auto th1 = d1.spawn();
+    auto th2 = d2.spawn();
+    auto th3 = d3.spawn();
 
-    // d1.pull();
-    // d2.pull();
-    // d3.pull();
-    // coordinator.pull();
-    // coordinator.dispatch();
-
-    // d1.pull();
-    // d2.pull();
-    // d3.pull();
-    // coordinator.pull();
-    // coordinator.dispatch();
-
-    // d1.pull();
-    // d2.pull();
-    // d3.pull();
-    // coordinator.pull();
-    // coordinator.dispatch();
-
-    std::thread th1([&](){ while(true) d1.pull();});
-    std::thread th2([&](){ while(true) d2.pull();});
-    std::thread th3([&](){ while(true) d3.pull();});
-
-    while(true) { coordinator.pull(); coordinator.dispatch(); }
+    coordinator.mainloop();
 
     th1.join(); th2.join(); th3.join();
 
