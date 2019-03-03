@@ -4,7 +4,6 @@
 #include "tools/variant.hpp"
 #include "tools/queue_lock.hpp"
 #include "events/event_helper.hpp"
-#include "engine/executor_actor.hpp"
 #include <vector>
 
 template <typename... TA0>
@@ -51,7 +50,18 @@ struct Executor
     void dispatch(const TEvent& e)
     {
         for (auto& a : actors)
-            std::visit(callback, a, e);
+            std::visit([&](auto& aa, auto& ee) { event(aa, ee); }, a, e);
+    }
+
+    auto spawn()
+    {
+        return std::thread{[&]()
+        {
+            onStart();
+
+            while(true)
+                pull();
+        }};
     }
 
     void mainloop()
@@ -68,25 +78,11 @@ struct Executor
             thread.join();
     }
 
-    auto spawn()
-    {
-        return std::thread{[&]()
-        {
-            onStart();
-
-            while(true)
-                pull();
-        }};
-    }
-
 private:
     std::vector<Actors> actors;
     std::vector<Actors*> publishers;
     std::vector<std::thread> threads;
-    ExecutorActor<Actors> callback;
     pg::adaptor::QueueLock<PublishedEvents>* queue;
-
-    void addActor() {}
 
     template <typename A0, typename... A>
     void addActor(A0&& a0, A&&... a)
@@ -118,25 +114,12 @@ private:
             dispatch(e);
     }
 
-
-    template <typename TEvent>
-    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
-    {
-        while(!queue->try_push([&](auto& buffer) { buffer = e; }));
-    }
-
-    template <typename... T>
-    void publish(T&... ignore) { }
-
     template <typename TActor>
     bool spawn(TActor& actor, decltype(TActor{}.spawn())* ignore = nullptr)
     {
         threads.push_back(actor.spawn());
         return true;
     }
-
-    template <typename... T>
-    bool spawn(T&... ignore) { return false; }
 
     template <typename TActor>
     void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
@@ -145,8 +128,31 @@ private:
             actor.onStart();
     }
 
+    template <typename TActor, typename TEvent>
+    void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
+    {
+        actor.onEvent(e);
+    }
+
+    template <typename TEvent>
+    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
+    {
+        while(!queue->try_push([&](auto& buffer) { buffer = e; }));
+    }
+
+    void addActor() {}
+
+    template <typename... T>
+    bool spawn(T&... ignore) { return false; }
+
     template <typename... T>
     void start(T&... ignore) { }
+
+    template <typename... T>
+    void event(T&... ignore) { }
+
+    template <typename... T>
+    void publish(T&... ignore) { }
 };
 
 #endif // !__ENGINE_EXECUTOR__

@@ -16,7 +16,7 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
 
     void onEvent(PongEvent e)
     {
-        if (e.counter % 1000000 == 0)
+        if (e.counter % 10000 == 0)
             std::cout << "pong received: " << e.counter << std::endl;
         publish(PingEvent{e.counter+1});
     }
