@@ -13,28 +13,57 @@ struct Executor
     using Events = typename _GetEvents<TA0...>::Events;
     using PublishedEvents = typename _GetPublishedEvents<TA0...>::PublishedEvents;
 
-    Executor() {}
+    Executor()
+    {
+        queue = new pg::adaptor::QueueLock<PublishedEvents>();
+    }
 
-    Executor(TA0... actors)
+    Executor(TA0... actors) : Executor()
     {
         addActor(actors...);
     }
 
     template<typename TEvent>
-    void onEvent(TEvent e)
+    void onEvent(TEvent e, decltype(Events{TEvent{}})* ignore = nullptr)
     {
+        // std::cout << "on event called !" << (this) << std::endl;
         dispatch(Events{e});
+    }
+
+    template<typename... T>
+    void onEvent(T... ignore)
+    {
+        // std::cout << "on event is sad... " << (this) << std::endl;
     }
 
     template <typename F>
     void onPull(F f)
     {
-        pull();
+        queue->try_consume(f);
+    }
+
+    template <typename TEvent>
+    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
+    {
+        // std::cout << "publish called !" << (this) << std::endl;
+        while(!queue->try_push([&](auto& buffer) { buffer = e; }));
+    }
+
+    template <typename... T>
+    void publish(T... t)
+    {
+        // std::cout << "publish is sad... " << (this) << std::endl;
     }
 
     template<typename TEvent>
     void dispatch(const TEvent& e)
     {
+        // std::cout << "dispatch called !" << (this) << std::endl;
+
+         std::visit([&](auto& ev) {
+            publish(ev);
+        }, e);
+
         for (auto& a : actors)
             std::visit(callback, a, e);
     }
@@ -51,10 +80,19 @@ struct Executor
         }
     }
 
+    void mainloop()
+    {
+        while(true)
+        {
+            pull();
+        }
+    }
+
 private:
     std::vector<Actors> actors;
     std::vector<Actors*> publishers;
     ExecutorActor<Actors> callback;
+    pg::adaptor::QueueLock<PublishedEvents>* queue;
 
     void addActor() {}
 

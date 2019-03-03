@@ -4,6 +4,8 @@
 #include "tools/variant.hpp"
 #include "events/event_handler.hpp"
 
+template<typename...T> struct Executor;
+
 template <typename... T>
 struct _GetEvents
 {
@@ -32,16 +34,16 @@ struct _GetPublishedEvents
 {
 };
 
-template <typename... T>
-struct _GetPublishedEvents<EventPublisher<T...>>
-{
-    using PublishedEvents = typename VariantToReducedVariant<T...>::Variant;
-};
-
 template <typename T0>
 struct _GetPublishedEvents<T0>
 {
-    using PublishedEvents = std::variant<std::monostate>;
+    using PublishedEvents = typename T0::PublishedEvents;
+};
+
+template <typename... T>
+struct _GetPublishedEvents<Executor<T...>>
+{
+    using PublishedEvents = typename Executor<T...>::PublishedEvents;
 };
 
 template <typename T0, typename... T>
