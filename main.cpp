@@ -9,6 +9,16 @@ struct BarEvent { std::uint32_t counter{0}; std::uint64_t data{0}; };
 
 struct MyActor : public Actor<EventHandler<FooEvent>, EventPublisher<BarEvent>>
 {
+    MyActor() = default;
+    MyActor(MyActor&&) = default;
+    MyActor(const MyActor&) = delete;
+    MyActor& operator=(const MyActor&) = delete;
+
+    void onStart()
+    {
+        publish(BarEvent{0, 55});
+    }
+
     void onEvent(FooEvent e)
     {
         std::cout << "foo " << (int)e.counter << std::endl;
@@ -42,24 +52,19 @@ int main()
 {
     std::cout << "Hello, World!" << std::endl;
 
-    auto a{MyActor{}};
-    auto b{MyOtherActor{}};
-    auto c{MyCombinedActor{}};
+    auto coordinator = Executor {
+        Executor{MyActor{}},
+        Executor{MyOtherActor{}, MyCombinedActor{}},
+        Executor{MyCombinedActor{}}
+    };
 
-    auto d1 = Executor{a};
-    auto d2 = Executor{b, c};
-    auto d3 = Executor{c};
-    auto coordinator = Executor{d1, d2, d3};
-
-    d1.onEvent(FooEvent{1});
-
-    auto th1 = d1.spawn();
-    auto th2 = d2.spawn();
-    auto th3 = d3.spawn();
+    // auto th1 = d1.spawn();
+    // auto th2 = d2.spawn();
+    // auto th3 = d3.spawn();
 
     coordinator.mainloop();
 
-    th1.join(); th2.join(); th3.join();
+    // th1.join(); th2.join(); th3.join();
 
     std::cout << "Kthxbye!" << std::endl;
     return 0;

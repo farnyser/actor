@@ -16,7 +16,8 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
 
     void onEvent(PongEvent e)
     {
-        std::cout << "pong received: " << e.counter << std::endl;
+        if (e.counter % 1000000 == 0)
+            std::cout << "pong received: " << e.counter << std::endl;
         publish(PingEvent{e.counter+1});
     }
 };
@@ -25,7 +26,7 @@ struct PongActor : public Actor<EventHandler<PingEvent>, EventPublisher<PongEven
 {
     void onEvent(PingEvent e)
     {
-        publish(PongEvent{e.counter+1});
+        publish(PongEvent{e.counter});
     }
 };
 
@@ -33,16 +34,12 @@ int main()
 {
     std::cout << "Starting PingPong play !!" << std::endl;
 
-    auto d1 = Executor{PingActor{}};
-    auto d2 = Executor{PongActor{}};
-    auto coordinator = Executor{d1, d2};
-
-    auto th1 = d1.spawn();
-    auto th2 = d2.spawn();
+    auto coordinator = Executor{
+        Executor{PingActor{}},
+        Executor{PongActor{}}
+    };
 
     coordinator.mainloop();
-
-    th1.join(); th2.join();
 
     std::cout << "Kthxbye!" << std::endl;
     return 0;

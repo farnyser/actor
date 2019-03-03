@@ -19,7 +19,7 @@ struct Executor
         queue = new pg::adaptor::QueueLock<PublishedEvents>();
     }
 
-    Executor(TA0... actors) : Executor()
+    Executor(TA0&&... actors) : Executor()
     {
         addActor(actors...);
     }
@@ -63,6 +63,9 @@ struct Executor
             pull();
             dispatch();
         }
+
+        for(auto& thread : threads)
+            thread.join();
     }
 
     auto spawn()
@@ -79,15 +82,16 @@ struct Executor
 private:
     std::vector<Actors> actors;
     std::vector<Actors*> publishers;
+    std::vector<std::thread> threads;
     ExecutorActor<Actors> callback;
     pg::adaptor::QueueLock<PublishedEvents>* queue;
 
     void addActor() {}
 
     template <typename A0, typename... A>
-    void addActor(A0& a0, A... a)
+    void addActor(A0&& a0, A&&... a)
     {
-        actors.push_back(Actors{a0});
+        actors.push_back(Actors{std::move(a0)});
         addActor(a...);
     }
 
@@ -122,16 +126,27 @@ private:
     }
 
     template <typename... T>
-    void publish(T... ignore) { }
+    void publish(T&... ignore) { }
+
+    template <typename TActor>
+    bool spawn(TActor& actor, decltype(TActor{}.spawn())* ignore = nullptr)
+    {
+        threads.push_back(actor.spawn());
+        return true;
+    }
+
+    template <typename... T>
+    bool spawn(T&... ignore) { return false; }
 
     template <typename TActor>
     void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
     {
-        actor.onStart();
+        if (!spawn(actor))
+            actor.onStart();
     }
 
     template <typename... T>
-    void start(T... ignore) { }
+    void start(T&... ignore) { }
 };
 
 #endif // !__ENGINE_EXECUTOR__
