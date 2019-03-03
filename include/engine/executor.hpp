@@ -24,6 +24,12 @@ struct Executor
         addActor(actors...);
     }
 
+    void onStart()
+    {
+        for(auto& actor : actors)
+            std::visit([&](auto &a){ start(a); }, actor);
+    }
+
     template<typename TEvent>
     void onEvent(TEvent e, decltype(Events{TEvent{}})* ignore = nullptr)
     {
@@ -41,17 +47,6 @@ struct Executor
         queue->try_consume(f);
     }
 
-    template <typename TEvent>
-    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
-    {
-        while(!queue->try_push([&](auto& buffer) { buffer = e; }));
-    }
-
-    template <typename... T>
-    void publish(T... t)
-    {
-    }
-
     template<typename TEvent>
     void dispatch(const TEvent& e)
     {
@@ -61,6 +56,8 @@ struct Executor
 
     void mainloop()
     {
+        onStart();
+
         while(true)
         {
             pull();
@@ -70,7 +67,13 @@ struct Executor
 
     auto spawn()
     {
-        return std::thread{[&](){ while(true) pull(); }};
+        return std::thread{[&]()
+        {
+            onStart();
+
+            while(true)
+                pull();
+        }};
     }
 
 private:
@@ -110,6 +113,25 @@ private:
         for (auto& e : events)
             dispatch(e);
     }
+
+
+    template <typename TEvent>
+    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
+    {
+        while(!queue->try_push([&](auto& buffer) { buffer = e; }));
+    }
+
+    template <typename... T>
+    void publish(T... ignore) { }
+
+    template <typename TActor>
+    void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
+    {
+        actor.onStart();
+    }
+
+    template <typename... T>
+    void start(T... ignore) { }
 };
 
 #endif // !__ENGINE_EXECUTOR__
