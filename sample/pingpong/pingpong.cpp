@@ -12,14 +12,19 @@ struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock:
 struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEvent>>
 {
     latency<30 * 1000 * 1000, 300000> latency;
+    std::thread::id self;
 
     void onStart()
     {
+        self = std::this_thread::get_id();
         publish(PingEvent{0, std::chrono::high_resolution_clock::now()});
     }
 
     void onEvent(PongEvent e)
     {
+        if(self != std::this_thread::get_id())
+            exit(-2);
+
         latency.add(std::chrono::high_resolution_clock::now() - e.timestamp);
 
         if (e.counter > 0 && e.counter % 100000 == 0)
@@ -34,9 +39,18 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
 
 struct PongActor : public Actor<EventHandler<PingEvent>, EventPublisher<PongEvent>>
 {
-    void onStart() {}
+    std::thread::id self;
+
+    void onStart()
+    {
+        self = std::this_thread::get_id();
+    }
+
     void onEvent(PingEvent e)
     {
+        if(self != std::this_thread::get_id())
+            exit(-2);
+
         publish(PongEvent{e.counter, e.timestamp});
     }
 };
