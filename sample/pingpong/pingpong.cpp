@@ -12,7 +12,7 @@ struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock:
 
 struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEvent>>
 {
-    latency<30 * 1000 * 1000, 300000> latency;
+    latency<20 * 1000 * 1000, 300000> latency;
 
     void onStart()
     {
@@ -47,7 +47,7 @@ int main()
 
     auto coordinator = Coordinator{"Main",
         Executor{"PingExecutor", PingActor{}},
-        Executor{"PongExecutor",PongActor{}}
+        Executor{"PongExecutor", PongActor{}}
     };
 
     // decltype(coordinator)::Events xxx = 1;

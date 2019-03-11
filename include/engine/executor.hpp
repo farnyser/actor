@@ -2,9 +2,13 @@
 #define __ENGINE_EXECUTOR__
 
 #include "tools/variant.hpp"
+#include "tools/single_consumer.hpp"
 #include "tools/queue_lock.hpp"
 #include "events/event_helper.hpp"
+#include <thread>
 #include <vector>
+
+#define SIZE 100
 
 template <typename... TA0>
 struct Executor
@@ -16,8 +20,8 @@ struct Executor
 
     Executor(std::string name = "") : name(name)
     {
-        outbound = new pg::adaptor::QueueLock<PublishedEvents>();
-        inbound = new pg::adaptor::QueueLock<Events>();
+        outbound = new pg::lockfree::SingleConsumer<PublishedEvents, SIZE>();
+        inbound = new pg::lockfree::SingleConsumer<Events, SIZE>();
     }
 
     Executor(TA0&&... actors) : Executor()
@@ -70,9 +74,8 @@ struct Executor
 private:
     std::vector<Actors> actors;
     std::vector<Actors*> publishers;
-    std::vector<std::thread> threads;
-    pg::adaptor::QueueLock<PublishedEvents>* outbound;
-    pg::adaptor::QueueLock<Events>* inbound;
+    pg::lockfree::SingleConsumer<PublishedEvents, SIZE>* outbound;
+    pg::lockfree::SingleConsumer<Events, SIZE>* inbound;
 
     template <typename A0, typename... A>
     void addActor(A0&& a0, A&&... a)
