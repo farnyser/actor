@@ -27,7 +27,7 @@ public:
     }
 
     template <typename O, typename TRatio = std::chrono::microseconds>
-    void generate(O& output)
+    void generate(O& output, const char* unit)
     {
         std::cout   << std::setw(20) << "duration"
                     << std::setw(21) << "percentile"
@@ -46,7 +46,7 @@ public:
             cum += current;
 
             auto percentile = (double)cum / count * 100.0;
-            std::cout   << std::setw(20) << std::chrono::duration_cast<TRatio>((i+1) * bucketDuration).count()
+            std::cout   << std::setw(20) << std::chrono::duration_cast<TRatio>((i+1) * bucketDuration).count() << unit
                         << std::setw(20) << percentile << "%"
                         << std::setw(20) << current
                         << std::endl;
@@ -54,7 +54,7 @@ public:
             mean = (mean * (cum-current) + current * (i+1)) / cum;
         }
 
-        std::cout << "#Mean " << std::chrono::duration_cast<TRatio>(mean * bucketDuration).count() << std::endl;
+        std::cout << "#Mean " << std::chrono::duration_cast<TRatio>(mean * bucketDuration).count() << unit << std::endl;
     }
 };
 

@@ -3,6 +3,7 @@
 
 #include "actor/actor.hpp"
 #include "engine/executor.hpp"
+#include "engine/coordinator.hpp"
 
 struct FooEvent { std::uint32_t counter{0}; };
 struct BarEvent { std::uint32_t counter{0}; std::uint64_t data{0}; };
@@ -52,19 +53,13 @@ int main()
 {
     std::cout << "Hello, World!" << std::endl;
 
-    auto coordinator = Executor {
+    auto coordinator = Coordinator {
         Executor{MyActor{}},
         Executor{MyOtherActor{}, MyCombinedActor{}},
         Executor{MyCombinedActor{}}
     };
 
-    // auto th1 = d1.spawn();
-    // auto th2 = d2.spawn();
-    // auto th3 = d3.spawn();
-
     coordinator.mainloop();
-
-    // th1.join(); th2.join(); th3.join();
 
     std::cout << "Kthxbye!" << std::endl;
     return 0;

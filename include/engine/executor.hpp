@@ -62,41 +62,9 @@ struct Executor
             while(true)
             {
                 pull();
-                dispatch(); // should not work without that ! :)
+                dispatch();
             }
         }};
-    }
-
-    void mainloop()
-    {
-        onStart();
-
-        while(true)
-        {
-            pull();
-            copy();
-            dispatch();
-        }
-
-        for(auto& thread : threads)
-            thread.join();
-    }
-
-    void copy()
-    {
-        outbound->try_consume([&](auto& e) {
-            std::visit([&](auto& ee) {
-                copy(ee);
-            }, e);
-        });
-    }
-
-    template <typename TEvent>
-    void copy(TEvent& e, decltype(Events{TEvent{}})* ignore = nullptr)
-    {
-        inbound->try_push([&](auto& ee){
-            ee = e;
-        });
     }
 
 private:
@@ -147,17 +115,9 @@ private:
     }
 
     template <typename TActor>
-    bool spawn(TActor& actor, decltype(TActor{}.spawn())* ignore = nullptr)
-    {
-        threads.push_back(actor.spawn());
-        return true;
-    }
-
-    template <typename TActor>
     void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
     {
-        if (!spawn(actor))
-            actor.onStart();
+        actor.onStart();
     }
 
     template <typename TActor, typename TEvent>
@@ -185,9 +145,6 @@ private:
 
     template <typename... T>
     void publish(T&... ignore) { }
-
-    template <typename... T>
-    void copy(T&... ingore) { }
 };
 
 #endif // !__ENGINE_EXECUTOR__

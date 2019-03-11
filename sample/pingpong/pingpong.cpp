@@ -4,6 +4,7 @@
 
 #include "actor/actor.hpp"
 #include "engine/executor.hpp"
+#include "engine/coordinator.hpp"
 #include "tools/latency.hpp"
 
 struct PingEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock::time_point timestamp; };
@@ -12,24 +13,19 @@ struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock:
 struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEvent>>
 {
     latency<30 * 1000 * 1000, 300000> latency;
-    std::thread::id self;
 
     void onStart()
     {
-        self = std::this_thread::get_id();
         publish(PingEvent{0, std::chrono::high_resolution_clock::now()});
     }
 
     void onEvent(PongEvent e)
     {
-        if(self != std::this_thread::get_id())
-            exit(-2);
-
         latency.add(std::chrono::high_resolution_clock::now() - e.timestamp);
 
         if (e.counter > 0 && e.counter % 100000 == 0)
         {
-            latency.generate<std::ostream, std::chrono::nanoseconds>(std::cout);
+            latency.generate<std::ostream, std::chrono::nanoseconds>(std::cout, "ns");
             exit(0);
         }
 
@@ -39,18 +35,8 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
 
 struct PongActor : public Actor<EventHandler<PingEvent>, EventPublisher<PongEvent>>
 {
-    std::thread::id self;
-
-    void onStart()
-    {
-        self = std::this_thread::get_id();
-    }
-
     void onEvent(PingEvent e)
     {
-        if(self != std::this_thread::get_id())
-            exit(-2);
-
         publish(PongEvent{e.counter, e.timestamp});
     }
 };
@@ -59,7 +45,7 @@ int main()
 {
     std::cout << "Starting PingPong play !!" << std::endl;
 
-    auto coordinator = Executor{"Main",
+    auto coordinator = Coordinator{"Main",
         Executor{"PingExecutor", PingActor{}},
         Executor{"PongExecutor",PongActor{}}
     };
