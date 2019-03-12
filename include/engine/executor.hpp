@@ -99,14 +99,9 @@ private:
 
     void dispatch()
     {
-        std::vector<Events> events;
-        while(inbound->try_consume([&](auto& e) { events.push_back(e); }));
-
-        if(events.empty())
-            return;
-
-        for (auto& e : events)
+        while(inbound->try_consume([&](auto& e) {
             dispatch(e);
+        }));
     }
 
     template<typename TEvent>
