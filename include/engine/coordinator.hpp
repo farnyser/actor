@@ -49,7 +49,6 @@ struct Coordinator
 
 private:
     std::vector<Actors> actors;
-    std::vector<Actors*> publishers;
     std::vector<std::thread> threads;
 
     template <typename A0, typename... A>

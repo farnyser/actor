@@ -12,7 +12,7 @@ struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock:
 
 struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEvent>>
 {
-    latency<20 * 1000 * 1000, 300000> latency;
+    pg::latency<20 * 1000 * 1000, 300000> latency;
 
     void onStart()
     {
@@ -23,7 +23,7 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
     {
         latency.add(std::chrono::high_resolution_clock::now() - e.timestamp);
 
-        if (e.counter > 0 && e.counter % 100000 == 0)
+        if (e.counter > 0 && e.counter % 1000000 == 0)
         {
             latency.generate<std::ostream, std::chrono::nanoseconds>(std::cout, "ns");
             exit(0);

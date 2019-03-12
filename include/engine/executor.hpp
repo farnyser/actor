@@ -73,7 +73,6 @@ struct Executor
 
 private:
     std::vector<Actors> actors;
-    std::vector<Actors*> publishers;
     pg::lockfree::SingleConsumer<PublishedEvents, SIZE>* outbound;
     pg::lockfree::SingleConsumer<Events, SIZE>* inbound;
 
