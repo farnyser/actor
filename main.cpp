@@ -15,24 +15,27 @@ struct MyActor : public Actor<EventHandler<FooEvent>, EventPublisher<BarEvent>>
     MyActor(const MyActor&) = delete;
     MyActor& operator=(const MyActor&) = delete;
 
-    void onStart()
+    template <typename TPublisher>
+    void onStart(TPublisher& bus)
     {
-        publish(BarEvent{0, 55});
+        bus.publish(BarEvent{0, 55});
     }
 
-    void onEvent(FooEvent e)
+    template <typename TPublisher>
+    void onEvent(FooEvent e, TPublisher& bus)
     {
         std::cout << "foo " << (int)e.counter << std::endl;
-        publish(BarEvent{e.counter+1, 55});
+        bus.publish(BarEvent{e.counter+1, 55});
     }
 };
 
 struct MyOtherActor : public Actor<EventHandler<BarEvent>, EventPublisher<FooEvent>>
 {
-    void onEvent(BarEvent e)
+    template <typename TPublisher>
+    void onEvent(BarEvent e, TPublisher& bus)
     {
         std::cout << "bar " << (int)e.counter << " " << e.data << std::endl;
-        publish(FooEvent{e.counter+1});
+        bus.publish(FooEvent{e.counter+1});
     }
 };
 

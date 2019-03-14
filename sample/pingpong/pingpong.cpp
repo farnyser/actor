@@ -14,12 +14,14 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
 {
     pg::latency<20 * 1000 * 1000, 300000> latency;
 
-    void onStart()
+    template <typename P>
+    void onStart(P& bus)
     {
-        publish(PingEvent{0, std::chrono::high_resolution_clock::now()});
+        bus.publish(PingEvent{0, std::chrono::high_resolution_clock::now()});
     }
 
-    void onEvent(PongEvent e)
+    template <typename P>
+    void onEvent(const PongEvent& e, P& bus)
     {
         latency.add(std::chrono::high_resolution_clock::now() - e.timestamp);
 
@@ -29,15 +31,16 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
             exit(0);
         }
 
-        publish(PingEvent{e.counter+1, std::chrono::high_resolution_clock::now()});
+        bus.publish(PingEvent{e.counter+1, std::chrono::high_resolution_clock::now()});
     }
 };
 
 struct PongActor : public Actor<EventHandler<PingEvent>, EventPublisher<PongEvent>>
 {
-    void onEvent(PingEvent e)
+    template <typename P>
+    void onEvent(const PingEvent& e, P& bus)
     {
-        publish(PongEvent{e.counter, e.timestamp});
+        bus.publish(PongEvent{e.counter, e.timestamp});
     }
 };
 

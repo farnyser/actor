@@ -10,6 +10,12 @@
 
 #define SIZE 100
 
+struct Publisher
+{
+    template <typename T>
+    void publish(T& t){}
+};
+
 template <typename... TA0>
 struct Executor
 {
@@ -65,10 +71,15 @@ struct Executor
 
             while(true)
             {
-                pull();
                 dispatch();
             }
         }};
+    }
+
+    template <typename TEvent>
+    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
+    {
+        while(!outbound->try_push([&](auto& buffer) { buffer = e; }));
     }
 
 private:
@@ -81,20 +92,6 @@ private:
     {
         actors.push_back(Actors{std::move(a0)});
         addActor(a...);
-    }
-
-    void pull()
-    {
-        for (auto& a : actors)
-        {
-            std::visit([&](auto &aa) {
-                aa.onPull([&](auto &ee) {
-                    std::visit([&](auto& ev) {
-                        publish(ev);
-                    }, ee);
-                });
-             }, a);
-        }
     }
 
     void dispatch()
@@ -112,21 +109,27 @@ private:
     }
 
     template <typename TActor>
+    void start(TActor& actor, decltype(TActor{}.onStart((Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
+    {
+        actor.onStart(*this);
+    }
+
+    template <typename TActor>
     void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
     {
         actor.onStart();
     }
 
     template <typename TActor, typename TEvent>
+    void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e, (Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
+    {
+        actor.onEvent(e, *this);
+    }
+
+    template <typename TActor, typename TEvent>
     void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
     {
         actor.onEvent(e);
-    }
-
-    template <typename TEvent>
-    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
-    {
-        while(!outbound->try_push([&](auto& buffer) { buffer = e; }));
     }
 
     void addActor() {}
