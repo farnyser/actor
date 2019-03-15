@@ -21,7 +21,6 @@ struct Executor
 {
     using Actors = typename VariantToReducedVariant<std::variant<TA0...>>::Variant;
     using Events = typename _GetEvents<TA0...>::Events;
-    using PublishedEvents = typename _GetPublishedEvents<TA0...>::PublishedEvents;
     std::string name;
 
     Executor(std::string name = "") : name(name)
@@ -47,7 +46,7 @@ struct Executor
     }
 
     template<typename TEvent>
-    void onEvent(TEvent e, decltype(Events{TEvent{}})* ignore = nullptr)
+    void onEvent(const TEvent& e, decltype(Events{TEvent{}})* ignore = nullptr)
     {
         while(!inbound->try_push([&](auto& buffer){
             buffer = e;
@@ -110,13 +109,13 @@ private:
     }
 
     template <typename TActor, typename TEvent, typename TPublisher>
-    void event(TActor& actor, TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e, (Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
+    void event(TActor& actor, const TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e, (Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
     {
         actor.onEvent(e, bus);
     }
 
     template <typename TActor, typename TEvent, typename TPublisher>
-    void event(TActor& actor, TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e))* ignore = nullptr)
+    void event(TActor& actor, const TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e))* ignore = nullptr)
     {
         actor.onEvent(e);
     }

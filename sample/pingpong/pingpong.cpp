@@ -10,7 +10,7 @@
 struct PingEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock::time_point timestamp; };
 struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock::time_point timestamp; };
 
-struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEvent>>
+struct PingActor : public Actor<EventHandler<PongEvent>>
 {
     pg::latency<20 * 1000 * 1000, 300000> latency;
 
@@ -35,7 +35,7 @@ struct PingActor : public Actor<EventHandler<PongEvent>, EventPublisher<PingEven
     }
 };
 
-struct PongActor : public Actor<EventHandler<PingEvent>, EventPublisher<PongEvent>>
+struct PongActor : public Actor<EventHandler<PingEvent>>
 {
     template <typename P>
     void onEvent(const PingEvent& e, P& bus)

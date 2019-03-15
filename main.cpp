@@ -8,7 +8,7 @@
 struct FooEvent { std::uint32_t counter{0}; };
 struct BarEvent { std::uint32_t counter{0}; std::uint64_t data{0}; };
 
-struct MyActor : public Actor<EventHandler<FooEvent>, EventPublisher<BarEvent>>
+struct MyActor : public Actor<EventHandler<FooEvent>>
 {
     MyActor() = default;
     MyActor(MyActor&&) = default;
@@ -29,7 +29,7 @@ struct MyActor : public Actor<EventHandler<FooEvent>, EventPublisher<BarEvent>>
     }
 };
 
-struct MyOtherActor : public Actor<EventHandler<BarEvent>, EventPublisher<FooEvent>>
+struct MyOtherActor : public Actor<EventHandler<BarEvent>>
 {
     template <typename TPublisher>
     void onEvent(BarEvent e, TPublisher& bus)

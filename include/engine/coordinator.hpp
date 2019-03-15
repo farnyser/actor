@@ -11,27 +11,16 @@ struct Coordinator
 {
     using Actors = typename VariantToReducedVariant<std::variant<TA0...>>::Variant;
     using Events = typename _GetEvents<TA0...>::Events;
-    using PublishedEvents = typename _GetPublishedEvents<TA0...>::PublishedEvents;
     std::string name;
 
-    Coordinator(std::string name = "") : name(name)
-    {
-    }
-
-    Coordinator(TA0&&... actors) : Coordinator()
+    Coordinator(TA0&&... actors)
     {
         addExecutor(actors...);
     }
 
-    Coordinator(std::string name, TA0&&... actors) : Coordinator(name)
+    Coordinator(std::string name, TA0&&... actors) : name(name)
     {
         addExecutor(actors...);
-    }
-
-    void onStart()
-    {
-        for(auto& actor : actors)
-            std::visit([&](auto &a){ start(a); }, actor);
     }
 
     void mainloop()
@@ -53,18 +42,17 @@ private:
     std::vector<Actors> actors;
     std::vector<std::thread> threads;
 
+    void onStart()
+    {
+        for(auto& actor : actors)
+            std::visit([&](auto &a){ start(a); }, actor);
+    }
+
     template <typename A0, typename... A>
     void addExecutor(A0&& a0, A&&... a)
     {
         actors.push_back(Actors{std::move(a0)});
         addExecutor(a...);
-    }
-
-    template<typename TEvent>
-    void dispatch(const TEvent& e)
-    {
-        for (auto& a : actors)
-            std::visit([&](auto& aa, auto& ee) { event(aa, ee); }, a, e);
     }
 
     template <typename TActor>
@@ -74,7 +62,7 @@ private:
     }
 
     template <typename TActor, typename TEvent>
-    void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
+    void event(TActor& actor, const TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
     {
         actor.onEvent(e);
     }
