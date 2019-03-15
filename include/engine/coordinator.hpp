@@ -38,13 +38,15 @@ struct Coordinator
     {
         onStart();
 
-        while(true)
-        {
-            pull();
-        }
-
         for(auto& thread : threads)
             thread.join();
+    }
+
+    template<typename TEvent>
+    void publish(const TEvent& e)
+    {
+        for (auto& a : actors)
+            std::visit([&](auto& aa) { event(aa, e ); }, a);
     }
 
 private:
@@ -58,18 +60,6 @@ private:
         addExecutor(a...);
     }
 
-    void pull()
-    {
-        for (auto& a : actors)
-        {
-            std::visit([&](auto &aa) {
-                aa.onPull([&](auto &ee) {
-                   dispatch(ee);
-                });
-             }, a);
-        }
-    }
-
     template<typename TEvent>
     void dispatch(const TEvent& e)
     {
@@ -78,9 +68,9 @@ private:
     }
 
     template <typename TActor>
-    void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
+    void start(TActor& actor)
     {
-        threads.push_back(actor.spawn());
+        threads.push_back(actor.spawn(*this));
     }
 
     template <typename TActor, typename TEvent>
@@ -90,12 +80,6 @@ private:
     }
 
     void addExecutor() {}
-
-    template <typename... T>
-    bool spawn(T&... ignore) { return false; }
-
-    template <typename... T>
-    void start(T&... ignore) { }
 
     template <typename... T>
     void event(T&... ignore) { }

@@ -26,7 +26,6 @@ struct Executor
 
     Executor(std::string name = "") : name(name)
     {
-        outbound = new pg::lockfree::SingleConsumer<PublishedEvents, SIZE>();
         inbound = new pg::lockfree::SingleConsumer<Events, SIZE>();
     }
 
@@ -40,10 +39,11 @@ struct Executor
         addActor(actors...);
     }
 
-    void onStart()
+    template <typename TPublisher>
+    void onStart(TPublisher& bus)
     {
         for(auto& actor : actors)
-            std::visit([&](auto &a){ start(a); }, actor);
+            std::visit([&](auto &a){ start(a, bus); }, actor);
     }
 
     template<typename TEvent>
@@ -57,34 +57,22 @@ struct Executor
     template<typename... T>
     void onEvent(T... ignore) { }
 
-    template <typename F>
-    void onPull(F f)
-    {
-        outbound->try_consume(f);
-    }
-
-    auto spawn()
+    template <typename P>
+    auto spawn(P& bus)
     {
         return std::thread{[&]()
         {
-            onStart();
+            onStart(bus);
 
             while(true)
             {
-                dispatch();
+                dispatch(bus);
             }
         }};
     }
 
-    template <typename TEvent>
-    void publish(TEvent e, decltype(PublishedEvents{TEvent{}})* ignore = nullptr)
-    {
-        while(!outbound->try_push([&](auto& buffer) { buffer = e; }));
-    }
-
 private:
     std::vector<Actors> actors;
-    pg::lockfree::SingleConsumer<PublishedEvents, SIZE>* outbound;
     pg::lockfree::SingleConsumer<Events, SIZE>* inbound;
 
     template <typename A0, typename... A>
@@ -94,40 +82,41 @@ private:
         addActor(a...);
     }
 
-    void dispatch()
+    template <typename TPublisher>
+    void dispatch(TPublisher& bus)
     {
         while(inbound->try_consume([&](auto& e) {
-            dispatch(e);
+            dispatch(e, bus);
         }));
     }
 
-    template<typename TEvent>
-    void dispatch(const TEvent& e)
+    template<typename TEvent, typename TPublisher>
+    void dispatch(const TEvent& e, TPublisher& bus)
     {
         for (auto& a : actors)
-            std::visit([&](auto& aa, auto& ee) { event(aa, ee); }, a, e);
+            std::visit([&](auto& aa, auto& ee) { event(aa, ee, bus); }, a, e);
     }
 
-    template <typename TActor>
-    void start(TActor& actor, decltype(TActor{}.onStart((Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
+    template <typename TActor, typename TPublisher>
+    void start(TActor& actor, TPublisher& bus, decltype(TActor{}.onStart((Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
     {
-        actor.onStart(*this);
+        actor.onStart(bus);
     }
 
-    template <typename TActor>
-    void start(TActor& actor, decltype(TActor{}.onStart())* ignore = nullptr)
+    template <typename TActor, typename TPublisher>
+    void start(TActor& actor, TPublisher& bus, decltype(TActor{}.onStart())* ignore = nullptr)
     {
         actor.onStart();
     }
 
-    template <typename TActor, typename TEvent>
-    void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e, (Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
+    template <typename TActor, typename TEvent, typename TPublisher>
+    void event(TActor& actor, TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e, (Publisher&)*((Publisher*)nullptr)))* ignore = nullptr)
     {
-        actor.onEvent(e, *this);
+        actor.onEvent(e, bus);
     }
 
-    template <typename TActor, typename TEvent>
-    void event(TActor& actor, TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
+    template <typename TActor, typename TEvent, typename TPublisher>
+    void event(TActor& actor, TEvent& e, TPublisher& bus, decltype(TActor{}.onEvent(e))* ignore = nullptr)
     {
         actor.onEvent(e);
     }
@@ -142,9 +131,6 @@ private:
 
     template <typename... T>
     void event(T&... ignore) { }
-
-    template <typename... T>
-    void publish(T&... ignore) { }
 };
 
 #endif // !__ENGINE_EXECUTOR__
