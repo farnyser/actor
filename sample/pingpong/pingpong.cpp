@@ -7,12 +7,14 @@
 #include "engine/coordinator.hpp"
 #include "tools/latency.hpp"
 
+#define PING_PONG_ITERATION 5000000
+
 struct PingEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock::time_point timestamp; };
 struct PongEvent { std::uint32_t counter{0}; std::chrono::high_resolution_clock::time_point timestamp; };
 
 struct PingActor : public Actor<EventHandler<PongEvent>>
 {
-    pg::latency<20 * 1000 * 1000, 300000> latency;
+    pg::latency<500 * 1000, 300000> latency;
 
     template <typename P>
     void onStart(P& bus)
@@ -25,7 +27,7 @@ struct PingActor : public Actor<EventHandler<PongEvent>>
     {
         latency.add(std::chrono::high_resolution_clock::now() - e.timestamp);
 
-        if (e.counter > 0 && e.counter % 1000000 == 0)
+        if (e.counter == PING_PONG_ITERATION)
         {
             latency.generate<std::ostream, std::chrono::nanoseconds>(std::cout, "ns");
             exit(0);

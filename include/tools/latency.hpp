@@ -15,48 +15,79 @@ namespace pg
         size_t count { 0 };
         std::chrono::nanoseconds bucketDuration{TMaxDurationNs / TBucketCount};
         std::array<size_t, TBucketCount> buckets{0};
+        size_t outOufBoundCount { 0 };
+        std::chrono::nanoseconds maxDuration;
 
     public:
         template <typename T>
         void add(T duration)
         {
-            auto bucketIndex = (std::uint64_t)(duration / bucketDuration);
-            if (bucketIndex > TBucketCount)
-                throw std::runtime_error("Latency computing failed");
-
-            buckets[bucketIndex]++;
             count++;
+
+            auto bucketIndex = (std::uint64_t)(duration / bucketDuration);
+            if (bucketIndex <= TBucketCount)
+            {
+                buckets[bucketIndex]++;
+                return;
+            }
+
+            outOufBoundCount++;
+            if (duration > maxDuration)
+                maxDuration = duration;
         }
 
         template <typename O, typename TRatio = std::chrono::microseconds>
         void generate(O& output, const char* unit)
         {
-            std::cout   << std::setw(20) << "duration"
-                        << std::setw(21) << "percentile"
-                        << std::setw(20) << "count"
-                        << std::endl;
+            output  << std::setw(20) << "duration"
+                    << std::setw(21) << "percentile"
+                    << std::setw(20) << "count"
+                    << std::endl;
 
             size_t cum = 0;
+            size_t q50 = 0;
+            size_t q99 = 0;
+            size_t q999 = 0;
             double mean = 0;
 
             for(size_t i = 0; i < TBucketCount; i++)
             {
                 auto current = buckets[i];
-                if (current == 0)
-                    continue;
-
-                cum += current;
-
-                auto percentile = (double)cum / count * 100.0;
-                std::cout   << std::setw(20) << std::chrono::duration_cast<TRatio>((i+1) * bucketDuration).count() << unit
-                            << std::setw(20) << percentile << "%"
-                            << std::setw(20) << current
-                            << std::endl;
-
-                mean = (mean * (cum-current) + current * (i+1)) / cum;
+                accumulate_and_print(output, unit, cum, mean, q50, q99, q999, current, std::chrono::duration_cast<TRatio>((i+1) * bucketDuration));
             }
 
-            std::cout << "#Mean " << std::chrono::duration_cast<TRatio>(mean * bucketDuration).count() << unit << std::endl;
+            accumulate_and_print(output, unit, cum, mean, q50, q99, q999, outOufBoundCount, std::chrono::duration_cast<TRatio>(maxDuration));
+
+            output << std::endl;
+            output  << "# Mean  " << std::setw(10) << std::chrono::duration_cast<TRatio>(mean * bucketDuration).count() << unit << std::endl
+                    << "# Q50   " <<  std::setw(10) << std::chrono::duration_cast<TRatio>(q50 * bucketDuration).count() << unit << std::endl
+                    << "# Q99   " <<  std::setw(10) << std::chrono::duration_cast<TRatio>(q99 * bucketDuration).count() << unit << std::endl
+                    << "# Q99.9 " <<  std::setw(10) << std::chrono::duration_cast<TRatio>(q999 * bucketDuration).count() << unit << std::endl
+                    << std::endl;
+        }
+
+        template <typename O, typename T>
+        void accumulate_and_print(O& output, const char* unit, size_t& cum, double& mean, size_t& q50, size_t& q99, size_t& q999, size_t current, T duration)
+        {
+            if (current == 0)
+                return;
+
+            cum += current;
+
+            auto percentile = (double)cum / count * 100.0;
+            output  << std::setw(20) << duration.count() << unit
+                    << std::setw(20) << percentile << "%"
+                    << std::setw(20) << current
+                    << std::endl;
+
+            mean = (mean * (cum-current) + current * (duration / bucketDuration)) / cum;
+
+            if (q50 == 0 && percentile > 50.0)
+                q50 = duration / bucketDuration;
+            if (q99 == 0 && percentile > 99.0)
+                q99 = duration / bucketDuration;
+            if (q999 == 0 && percentile > 99.9)
+                q999 = duration / bucketDuration;
         }
     };
 }
