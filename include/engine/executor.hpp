@@ -8,7 +8,7 @@
 #include <thread>
 #include <vector>
 
-#define SIZE 100
+#define SIZE 5
 
 struct Publisher
 {
@@ -25,7 +25,6 @@ struct Executor
 
     Executor(std::string name = "") : name(name)
     {
-        inbound = new pg::lockfree::SingleConsumer<Events, SIZE>();
     }
 
     Executor(TA0&&... actors) : Executor()
@@ -46,19 +45,21 @@ struct Executor
     }
 
     template<typename TEvent>
-    void onEvent(const TEvent& e, decltype(Events{TEvent{}})* ignore = nullptr)
+    void publish(const TEvent& e, size_t publisherId, decltype(Events{TEvent{}})* ignore = nullptr)
     {
-        while(!inbound->try_push([&](auto& buffer){
+        while(!inbound->Publisher[publisherId].try_push([&](auto& buffer){
             buffer = e;
         }));
     }
 
     template<typename... T>
-    void onEvent(T... ignore) { }
+    void publish(T... ignore) { }
 
     template <typename P>
-    auto spawn(P& bus)
+    auto spawn(P& bus, size_t executorCount)
     {
+        inbound = new pg::lockfree::SingleConsumer<Events, SIZE>(executorCount);
+
         return std::thread{[&]()
         {
             onStart(bus);

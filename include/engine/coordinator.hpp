@@ -4,7 +4,26 @@
 #include "tools/variant.hpp"
 #include "tools/queue_lock.hpp"
 #include "events/event_helper.hpp"
+
 #include <vector>
+#include <memory>
+
+template <typename TCoordinator>
+struct PublisherCallback
+{
+    TCoordinator& coordinator;
+    size_t executorId;
+
+    PublisherCallback(TCoordinator& coordinator, size_t executorId) : coordinator(coordinator), executorId(executorId)
+    {
+    }
+
+    template <typename TEvent>
+    void publish(const TEvent& e)
+    {
+        coordinator.publish(e, executorId);
+    }
+};
 
 template <typename... TA0>
 struct Coordinator
@@ -32,20 +51,21 @@ struct Coordinator
     }
 
     template<typename TEvent>
-    void publish(const TEvent& e)
+    void publish(const TEvent& e, size_t executorId)
     {
         for (auto& a : actors)
-            std::visit([&](auto& aa) { event(aa, e ); }, a);
+            std::visit([&](auto& aa) { event(aa, e, executorId ); }, a);
     }
 
 private:
     std::vector<Actors> actors;
+    std::vector<std::unique_ptr<PublisherCallback<Coordinator<TA0...>>>> callbacks;
     std::vector<std::thread> threads;
 
     void onStart()
     {
-        for(auto& actor : actors)
-            std::visit([&](auto &a){ start(a); }, actor);
+        for(size_t i = 0; i < actors.size(); i++)
+            std::visit([&](auto &a){ start(a, i); }, actors[i]);
     }
 
     template <typename A0, typename... A>
@@ -55,16 +75,17 @@ private:
         addExecutor(a...);
     }
 
-    template <typename TActor>
-    void start(TActor& actor)
+    template <typename TExecutor>
+    void start(TExecutor& executor, size_t id)
     {
-        threads.push_back(actor.spawn(*this));
+        callbacks.emplace_back(std::make_unique<PublisherCallback<Coordinator<TA0...>>>(*this, id));
+        threads.push_back(executor.spawn(*(callbacks[callbacks.size()-1]), actors.size()));
     }
 
-    template <typename TActor, typename TEvent>
-    void event(TActor& actor, const TEvent& e, decltype(TActor{}.onEvent(e))* ignore = nullptr)
+    template <typename TExecutor, typename TEvent>
+    void event(TExecutor& executor, const TEvent& e, size_t executorId, decltype(TExecutor{}.publish(e, 0))* ignore = nullptr)
     {
-        actor.onEvent(e);
+        executor.publish(e, executorId);
     }
 
     void addExecutor() {}

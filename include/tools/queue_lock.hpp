@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 
-namespace pg 
+namespace pg
 {
 	namespace adaptor
 	{
@@ -15,25 +15,25 @@ namespace pg
 			private:
 				std::queue<T> q;
 				std::mutex m;
-			
+
 			public:
 				template <typename F>
-				size_t try_consume(F f) {
+				bool try_consume(F f) {
 					std::lock_guard<std::mutex> lock(m);
-					
+
 					if(!q.empty())
 					{
 						f(q.front());
-						
+
 						q.pop();
 						return true;
 					}
-					
+
 					return false;
 				}
-				
+
 				template <typename F>
-				size_t try_push(F f) {
+				bool try_push(F f) {
 					std::lock_guard<std::mutex> lock(m);
 					T t;
 					f(t);
@@ -44,4 +44,4 @@ namespace pg
 	}
 }
 
-#endif 
+#endif

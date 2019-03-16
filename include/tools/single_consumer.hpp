@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <memory>
+#include <vector>
 
 namespace pg
 {
@@ -11,39 +12,66 @@ namespace pg
 		template <typename T, size_t SIZE>
 		class SingleConsumer
 		{
-            private:
-                std::atomic<unsigned long> read{0}, write{0};
-                unsigned long r{0}, w{0};
-                std::unique_ptr<std::array<T, SIZE>> buffer_ptr;
-                std::array<T, SIZE>& buffer;
+			private:
+                const size_t producerCount;
+				unsigned long rp;
 
-            public:
-                SingleConsumer() : buffer_ptr(new std::array<T, SIZE>()), buffer(*buffer_ptr) {
+			public:
+				class PublisherImpl
+				{
+					private:
+						std::atomic<unsigned long> read{0}, write{0};
+						unsigned long r{0}, w{0};
+						std::unique_ptr<std::array<T, SIZE>> buffer_ptr;
+						std::array<T, SIZE>& buffer;
+
+					public:
+						PublisherImpl() : buffer_ptr(new std::array<T, SIZE>()), buffer(*buffer_ptr) {
+						}
+
+						template <typename F>
+						bool try_consume(F f) {
+							if(r < write) {
+								f(buffer[r%SIZE]);
+								r++;
+								read++;
+								return true;
+							}
+							return false;
+						}
+
+						template <typename F>
+						bool try_push(F f) {
+							if(w - read < SIZE) {
+								f(buffer[w%SIZE]);
+								write++;
+								w++;
+								return true;
+							}
+							return false;
+						}
+				};
+
+                SingleConsumer(size_t producerCount = 1) : producerCount(producerCount)
+                {
+                    Publisher = new PublisherImpl[producerCount];
                 }
 
-                template <typename F>
-                bool try_consume(F f) {
-                    if(r < write) {
-                        f(buffer[r%SIZE]);
-                        r++;
-                        read++;
-                        return true;
-                    }
-                    return false;
-                }
+                ~SingleConsumer() { delete[] Publisher; }
 
-                template <typename F>
-                bool try_push(F f) {
-                    if(w - read < SIZE) {
-                        f(buffer[w%SIZE]);
-                        write++;
-                        w++;
-                        return true;
-                    }
-                    return false;
-                }
-        };
-    }
+				template <typename F>
+				bool try_consume(F f) {
+					for(size_t i = 0; i < producerCount; i++) {
+						auto&p = Publisher[rp++ % producerCount];
+						if(p.try_consume(f))
+							return true;
+					}
+					return false;
+				}
+
+				PublisherImpl* Publisher;
+		};
+	}
 }
 
 #endif

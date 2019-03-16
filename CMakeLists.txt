@@ -16,3 +16,7 @@ target_link_libraries (actor ${CMAKE_THREAD_LIBS_INIT})
 add_executable(pingpong sample/pingpong/pingpong.cpp)
 target_include_directories(pingpong PRIVATE include)
 target_link_libraries (pingpong ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(coherency_test test/coherency_test.cpp)
+target_include_directories(coherency_test PRIVATE include)
+target_link_libraries (coherency_test ${CMAKE_THREAD_LIBS_INIT})
